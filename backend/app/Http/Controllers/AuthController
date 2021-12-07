@@ -1,0 +1,214 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Validator;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Hash;
+
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\View;
+
+use App\Models\User;
+
+class AuthController extends Controller
+{
+
+    public function getSingleUser($id)
+    {
+        $user = User::find($id)->first();
+        return response()->json($user);
+    }
+
+   
+     public function login(Request $request)
+     {
+        $fields = $request->validate([
+            'email' => 'required|string',
+            'password' => 'required|string'
+        ]);
+
+        // Check email
+        $user = User::where('email', $fields['email'])->first();
+
+        // Check password
+        if(!$user || !Hash::check($fields['password'], $user->password)) {
+            return response([
+                'message' => 'Incorrect credentials'
+            ], 401);
+        }
+
+        $token = $user->createToken('token')->plainTextToken;
+
+        $response = [
+            'user' => $user,
+            'token' => $token,
+            'token_type' => 'Bearer'
+        ];
+
+        //$request->session()->set('user', $user);
+
+        return response()->json($response);
+
+     }
+
+     public function getAllUsers()
+     {
+         $users = User::all();
+
+         return response()->json($users);
+
+     }
+
+     public function register(Request $request)
+     {
+        $this->validate($request, [
+             'lastname' => 'required|string|max:35',
+             'firstname' => 'required|string|max:35',
+             'middlename' => 'required|string|max:35',
+             'birthDate' => 'required|string',
+             'birthPlace' => 'required|string|max:40',
+             'suffix' => 'required|string|max:15',
+             'sex' => 'required|string|max:10',
+             'age' => 'required|string',
+             'contact' => 'required|string|max:50',
+             'emergencyNo' => 'required|numeric',
+             'emergencyContact' => 'required|string|max:35',
+             'email' => 'required|string|email|max:255|unique:users',
+             'password' => 'required|string|min:8',
+             'image' => 'required|file|image|mimes:jpeg,png,jpg|max:2048',
+         ]);
+      
+         $imageRegister = time().'.'.$request->image->extension();  
+     
+         $request->image->move(public_path('images'), $imageRegister);
+
+         $user = new User();
+         $user->lastname = $request->lastname;
+         $user->firstname = $request->firstname;
+         $user->middlename = $request->middlename;
+         $user->birthDate = $request->birthDate;
+         $user->birthPlace = $request->birthPlace;
+         $user->suffix = $request->suffix;
+         $user->sex = $request->sex;
+         $user->age = $request->age;
+         $user->contact = $request->contact;
+         $user->emergencyNo = $request->emergencyNo;
+         $user->emergencyContact = $request->emergencyContact;  
+         $user->email = $request->email;
+         $user->password = Hash::make($request->password);
+         $user->image = $imageRegister;
+         $user->save();
+         
+        $token = $user->createToken('token')->plainTextToken;
+
+        // $response = [
+        //     'user' => $user,
+        //     'token' => $token,
+        //     'token_type' => 'Bearer'
+        // ];
+
+
+         return response()->json ([
+             'user' => $user,
+            'token' => $token,
+            'success' => true,
+            'message' => 'User registered successfully'
+        ]);
+     
+     }
+ 
+     public function updateProfile(Request $request, User $user)
+     {
+
+        // if(User::user()->email == request('email')){
+        //     $this->validate(request(),[
+        //     'lastname' => 'string|max:35',
+        //     'firstname' => 'string|max:35',
+        //     'middlename' => 'string|max:35',
+        //     'birthDate' => 'string',
+        //     'birthPlace' => 'string|max:40',
+        //     'suffix' => 'string|max:15',
+        //     'sex' => 'string|max:10',
+        //     'age' => 'string',
+        //     'contact' => 'string|max:50',
+        //     'emergencyNo' => 'numeric',
+        //     'emergencyContact' => 'string|max:35',
+        //     'email' => 'string|email|max:255',
+        //     'password' => 'string|min:8',
+        //     'image' => 'image|mimes:jpeg,png,jpg|max:2048'
+        //     ]);
+
+        //     if($request->hasfile('image'))
+        //     {
+        //         $request->file('image')->move(public_path('images/'), $request->file('image')->getClientOriginalName());
+        //         $image = 'images/' . $request->file('image')->getClientOriginalName();
+        //     }
+
+        //     $user->lastname = request('lastname');
+        //     $user->firstname = request('firstname');
+        //     $user->middlename = request('middlename');
+        //     $user->birthDate = request('birthDate');
+        //     $user->birthPlace = request('birthPlace');
+        //     $user->suffix = request('suffix');
+        //     $user->sex = request('sex');
+        //     $user->age = request('age');
+        //     $user->contact = request('contact');
+        //     $user->emergencyNo = request('emergencyNo');
+        //     $user->emergencyContact = request('emergencyContact');
+        //     $user->email = request('email');
+        //     $user->password = bcrypt($request('password'));
+        //     $user->image = request('image');
+
+        //     $updated = $user->save();
+
+        //     return response()->json($updated);
+
+        
+        // }
+        
+        $registration = $request->validate([
+            'email' => ['required', 'email'],
+            'password' => ['required'],
+            'lastname' => ['string|max:35'],
+            'firstname' => ['string|max:35'],
+            'middlename' => ['string|max:35'],
+            'birthDate' => ['string'],
+            'birthPlace' => ['string|max:40'],
+            'suffix' => ['string|max:15'],
+            'sex' => ['string|max:10'],
+            'age' => ['string'],
+            'contact' => ['string|max:50'],
+            'emergencyNo' => ['numeric'],
+            'emergencyContact' => ['string|max:35'],
+            'email' => ['string|email|max:255'],
+            'password' => ['string|min:8'],
+            'image' => ['image|mimes:jpeg,png,jpg|max:2048']
+        ]);
+
+        
+        if($request->hasfile('image'))
+        {
+            $request->file('image')->move(public_path('images/'), $request->file('image')->getClientOriginalName());
+            $image = 'images/' . $request->file('image')->getClientOriginalName();
+        }
+
+        if (Auth::attempt($registration)) {
+            $request->session()->regenerate();
+        }
+
+        $user->image = request('image');
+
+        $user = $user->save();
+
+
+        return response()->json($user);
+    }
+
+    public function getMyProfile(){
+        $user = Auth::user();
+        return response()->json($user);
+    }
+}

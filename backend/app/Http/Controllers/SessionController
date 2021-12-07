@@ -1,0 +1,22 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+
+class SessionController extends Controller
+{
+    public function get(Request $request)
+    {
+        $session = $request->session()->get($request->key);
+        return response()->json($session);
+    }
+
+    public function set(Request $request)
+    {
+        $request->session()->put($request->key, $request->value);
+        $session = $request->session()->get($request->key);
+        return response($session);
+    }
+}
